@@ -1,0 +1,21 @@
+[package]
+name = "unix-exec-output-catcher"
+description = "Library to run executables in a child process and catch STDOUT and STDERR output on UNIX-systems."
+version = "0.1.0"
+authors = ["Philipp Schuster <phip1611@gmail.com>"]
+edition = "2018"
+keywords = ["unix", "pipe", "fork", "exec", "posix"]
+categories = [ "os::unix-apis", "command-line-interface" ]
+readme = "README.md"
+license = "MIT"
+homepage = "https://github.com/phip1611/unix_exec_piper"
+repository = "https://github.com/phip1611/unix_exec_piper"
+documentation = "https://docs.rs/unix_exec_piper/"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+libc = "0.2.80"
+errno = "0.2.7"
+derive_more = "0.99.11"
+log = "0.4.11"
