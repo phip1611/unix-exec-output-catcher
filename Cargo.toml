@@ -8,9 +8,9 @@ keywords = ["unix", "pipe", "fork", "exec", "posix"]
 categories = [ "os::unix-apis", "command-line-interface" ]
 readme = "README.md"
 license = "MIT"
-homepage = "https://github.com/phip1611/unix_exec_piper"
-repository = "https://github.com/phip1611/unix_exec_piper"
-documentation = "https://docs.rs/unix_exec_piper/"
+homepage = "https://github.com/phip1611/unix-exec-output-catcher"
+repository = "https://github.com/phip1611/unix-exec-output-catcher"
+documentation = "https://docs.rs/unix-exec-output-catcher/"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
