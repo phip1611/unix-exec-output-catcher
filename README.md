@@ -11,7 +11,7 @@ this function will consume 1GB of memory. See examples directory for example cod
 use unix_exec_output_catcher::fork_exec_and_catch;
 
 fn main() {
-    // executes "ls" with the "-la" args.
+    // executes "ls" with "-la" as argument.
     // this is equivalent to running "$ ls -la" in your shell.
     // The line by line output is stored inside the result.
     let res = fork_exec_and_catch("ls", vec!["ls", "-la"]);

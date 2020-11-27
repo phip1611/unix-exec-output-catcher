@@ -10,7 +10,7 @@ fn main() {
         env_logger::init();
      */
 
-    // executes "ls" with the "-la" args.
+    // executes "ls" with "-la" as arguments.
     // this is equivalent to running "$ ls -la" in your shell.
     // The line by line output is stored inside the result.
     let res = fork_exec_and_catch("ls", vec!["ls", "-la"]);
