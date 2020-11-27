@@ -13,7 +13,7 @@ stdout or stderr, this function will never return. If the program produces 1GB o
 this function will consume 1GB of memory. See examples directory for example code.
 
 ## Example
-```
+```rust
 use unix_exec_output_catcher::fork_exec_and_catch;
 
 fn main() {
