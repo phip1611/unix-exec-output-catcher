@@ -45,6 +45,10 @@ fn exec(executable: &str, args: Vec<&str>) -> Result<(), UECOError> {
 ///
 /// This will be fine for commands like "sysctl -a" or "ls -la" on MacOS.
 ///
+/// ⚠ `std::process::Command` already covers this. 🚨
+/// I didn't know this when I created this lib. So better use that instead and take
+/// this source code as educational information how it could be done.
+///
 /// * `executable` Path or name of executable without null (\0). Lookup in $PATH happens automatically.
 /// * `args` vector of args, each without null (\0). Remember that the
 ///          first real arg starts at index 1. index 0 is usually

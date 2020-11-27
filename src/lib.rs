@@ -1,6 +1,10 @@
 //! This library lets you execute a child process and catch its output (stdout and stderr).
 //! This is useful if you want to use the output from a specific command and transform it
 //! in your program.
+//!
+//! ⚠ `std::process::Command` already covers this. 🚨
+//! I didn't know this when I created this lib. So better use that instead and take
+//! this source code as educational information how it could be done.
 
 use std::rc::Rc;
 

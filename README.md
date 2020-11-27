@@ -1,6 +1,12 @@
 # unix-exec-output-catcher
 A library written in Rust that executes an executable in a child process and catches its output (stdout and stderr).
 
+## ⚠️ This is mainly educational. Rust std lib covers this already. 🚨
+Thanks to a reddit user who told me that Rusts standard library already covers this.
+I was not aware of it. Therefore I recommend to use the standard library but
+use this as *educational resource* how it could be done - in case you're interested. :)
+[std/process/struct.Command.html#method.output](https://doc.rust-lang.org/std/process/struct.Command.html#method.output)
+
 ## TL;DR;
 The call to `fork_exec_and_catch()` is blocking. If the program produces infinite output to
 stdout or stderr, this function will never return. If the program produces 1GB of output
