@@ -37,10 +37,11 @@ fn exec(executable: &str, args: Vec<&str>) -> Result<(), UECOError> {
 }
 
 /// Executes a program in a child process and returns the output of STDOUT and STDERR
-/// line by line.
+/// line by line in a vector.
 /// Be aware that this is blocking and static! So if your executable produces 1GB of
-/// output text, the returned struct is 1GB in size. If the program doesn't
-/// terminate, this function will neither.
+/// output text, the data of the vectors of the returned structs are 1GB in size.
+///
+/// If the program doesn't terminate, this function will neither.
 ///
 /// This will be fine for commands like "sysctl -a" or "ls -la" on MacOS.
 ///

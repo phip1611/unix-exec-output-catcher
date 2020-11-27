@@ -1,5 +1,6 @@
-//! This library let's you execute a child process and catch its output (stdout and stderr).
-//! This is useful if you want to use the output from a specific command and transform it.
+//! This library lets you execute a child process and catch its output (stdout and stderr).
+//! This is useful if you want to use the output from a specific command and transform it
+//! in your program.
 
 use std::rc::Rc;
 
