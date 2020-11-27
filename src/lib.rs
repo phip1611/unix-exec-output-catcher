@@ -2,9 +2,10 @@
 //! This is useful if you want to use the output from a specific command and transform it
 //! in your program.
 //!
-//! ⚠ `std::process::Command` already covers this. 🚨
-//! I didn't know this when I created this lib. So better use that instead and take
-//! this source code as educational information how it could be done.
+//! ⚠️ Difference to std::process::Command 🚨
+//! `std::process::Command` does the same in the standard library but **with one exception**:
+//! My library gives you access to stdout, stderr, **and "stdcombined"**. This way you get all output
+//! lines in the order they appeared. That's the unique feature of this crate.
 
 use std::rc::Rc;
 

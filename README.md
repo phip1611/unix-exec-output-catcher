@@ -1,10 +1,10 @@
 # unix-exec-output-catcher
 A library written in Rust that executes an executable in a child process and catches its output (stdout and stderr).
 
-## ⚠️ This is mainly educational. Rust std lib covers this already. 🚨
-Thanks to a reddit user who told me that Rusts standard library already covers this.
-I was not aware of it. Therefore I recommend to use the standard library but
-use this as *educational resource* how it could be done - in case you're interested. :)
+## ⚠️ Difference to std::process::Command 🚨
+`std::process::Command` does the same in the standard library but **with one exception**:
+My library gives you access to stdout, stderr, **and "stdcombined"**. This way you get all output
+lines in the order they appeared. That's the unique feature of this crate.
 [std/process/struct.Command.html#method.output](https://doc.rust-lang.org/std/process/struct.Command.html#method.output)
 
 ## TL;DR;

@@ -45,9 +45,10 @@ fn exec(executable: &str, args: Vec<&str>) -> Result<(), UECOError> {
 ///
 /// This will be fine for commands like "sysctl -a" or "ls -la" on MacOS.
 ///
-/// ⚠ `std::process::Command` already covers this. 🚨
-/// I didn't know this when I created this lib. So better use that instead and take
-/// this source code as educational information how it could be done.
+/// ⚠️ Difference to std::process::Command 🚨
+/// `std::process::Command` does the same in the standard library but **with one exception**:
+/// My library gives you access to stdout, stderr, **and "stdcombined"**. This way you get all output
+/// lines in the order they appeared. That's the unique feature of this crate.
 ///
 /// * `executable` Path or name of executable without null (\0). Lookup in $PATH happens automatically.
 /// * `args` vector of args, each without null (\0). Remember that the

@@ -1,7 +1,7 @@
 [package]
 name = "unix-exec-output-catcher"
 description = "Library to run executables in a child process and catch STDOUT and STDERR output on UNIX-systems. std::process::Command is probably the better option. Use this source code as educational source how it could be done."
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Philipp Schuster <phip1611@gmail.com>"]
 edition = "2018"
 keywords = ["unix", "pipe", "fork", "exec", "posix"]
