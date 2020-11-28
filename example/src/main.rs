@@ -1,14 +1,12 @@
 use unix_exec_output_catcher::fork_exec_and_catch;
 
 fn main() {
-    /*  my lib uses "log"-crate:
-        optional
-        // trace activates all others
-        std::env::set_var("RUST_LOG", "trace");
-        // valid values are "OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"
-        // std::env::set_var("RUST_LOG", "trace,info,debug,warn,error");
-        env_logger::init();
-     */
+
+    // trace activates all others
+    std::env::set_var("RUST_LOG", "trace");
+    // valid values are "OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"
+    // std::env::set_var("RUST_LOG", "trace,info,debug,warn,error");
+    env_logger::init();
 
     // executes "ls" with "-la" as arguments.
     // this is equivalent to running "$ ls -la" in your shell.
