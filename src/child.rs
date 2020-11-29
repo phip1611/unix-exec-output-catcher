@@ -3,6 +3,9 @@
 use crate::error::UECOError;
 use crate::libc_util::{libc_ret_to_result, LibcSyscall};
 use crate::exec::exec;
+use std::cell::RefCell;
+use crate::pipe::Pipe;
+use std::rc::Rc;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum ProcessState {
@@ -20,6 +23,8 @@ pub struct ChildProcess {
     pid: Option<libc::pid_t>,
     exit_code: Option<i32>,
     state: ProcessState,
+    stdout_pipe: Rc<RefCell<Pipe>>,
+    stderr_pipe: Rc<RefCell<Pipe>>,
     /// Code that should be executed in child after fork()
     /// but before exec().
     child_after_dispatch_before_exec_fn: Box<dyn FnMut() -> Result<(), UECOError>>,
@@ -32,6 +37,7 @@ impl ChildProcess {
                args: Vec<&str>,
                child_after_dispatch_before_exec_fn: Box<dyn FnMut() -> Result<(), UECOError>>,
                parent_after_dispatch_fn: Box<dyn FnMut() -> Result<(), UECOError>>,
+               stdout_pipe: Rc<RefCell<Pipe>>, stderr_pipe: Rc<RefCell<Pipe>>,
     ) -> Self {
         ChildProcess {
             executable: executable.to_string(),
@@ -41,6 +47,8 @@ impl ChildProcess {
             state: ProcessState::Ready,
             child_after_dispatch_before_exec_fn,
             parent_after_dispatch_fn,
+            stdout_pipe,
+            stderr_pipe,
         }
     }
 
@@ -113,5 +121,15 @@ impl ChildProcess {
         }
 
         self.state
+    }
+
+    pub fn exit_code(&self) -> Option<i32> {
+        self.exit_code
+    }
+    pub fn stdout_pipe(&self) -> &Rc<RefCell<Pipe>> {
+        &self.stdout_pipe
+    }
+    pub fn stderr_pipe(&self) -> &Rc<RefCell<Pipe>> {
+        &self.stderr_pipe
     }
 }

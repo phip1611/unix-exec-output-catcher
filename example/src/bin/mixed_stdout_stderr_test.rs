@@ -1,6 +1,6 @@
 // due to my research: on MacOS AND Linux
 const DEFAULT_PIPE_BUFFER_SIZE: usize = 65_536;
-const ITERATIONS: usize = 1;
+const ITERATIONS: usize = 10;
 
 fn main() {
     // use this to check if my lib captures the output in right order

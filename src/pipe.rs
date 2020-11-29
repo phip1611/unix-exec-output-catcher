@@ -2,6 +2,35 @@
 
 use crate::error::UECOError;
 use crate::libc_util::{libc_ret_to_result, LibcSyscall};
+use crate::{OCatchStrategy};
+
+/// Convenient wrapper around the pipes that we
+/// need for the desired output catch strategy.
+#[derive(Debug)]
+pub enum CatchPipes {
+    Combined(Pipe),
+    Separately{stdout: Pipe, stderr: Pipe}
+}
+
+impl CatchPipes {
+    pub fn new(strategy: OCatchStrategy) -> Result<Self, UECOError> {
+        match strategy {
+            OCatchStrategy::StdCombined => {
+                Ok(
+                    CatchPipes::Combined(Pipe::new()?)
+                )
+            }
+            OCatchStrategy::StdSeparately => {
+                Ok(
+                    CatchPipes::Separately{
+                        stdout: Pipe::new()?,
+                        stderr: Pipe::new()?,
+                    }
+                )
+            }
+        }
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub enum PipeEnd {
@@ -46,38 +75,29 @@ impl Pipe {
         self.close_fd(self.read_fd)
     }
 
+    /// Try to read the next line from the read end of the pipe.
+    /// Returns ERR if a syscall failed. Returns OK(None) if
+    /// EOF was reached. Returns (Ok(Some(String)) if a new line
+    /// was read.
     pub(crate) fn read_line(&self) -> Result<Option<String>, UECOError> {
         if *self.end.as_ref().expect("Kind of Pipeend must be specified at this point") != PipeEnd::Read {
             return Err(UECOError::PipeNotMarkedAsReadEnd);
         }
 
         let mut chars = Vec::new();
-        const BUF_LEN: usize = 1; // Todo this is not efficient
-        let mut buf: [char; BUF_LEN] = ['\0'];
-        let buf_ptr = buf.as_mut_ptr() as * mut libc::c_void;
 
-        // read from file descriptor byte by byte (each iteration results in a syscall)
         loop {
-            let ret = unsafe { libc::read(self.read_fd, buf_ptr, BUF_LEN) };
-
-            // check error and unwrap
-            libc_ret_to_result(ret as i32, LibcSyscall::Read)?;
-
-            // EOF
-            if ret == 0 {
-                trace!("EOF found");
-                break
-            };
-            let char = buf[0];
+            // read from file descriptor byte by byte (each iteration results in a syscall)
+            let char = self.read_char()?;
+            if char.is_none() {
+                return Ok(None); // EOF
+            }
+            let char = char.unwrap();
             if char == '\n' {
                 trace!("newline (\\n) found");
                 break
             }
-            chars.push(buf[0]);
-        }
-
-        if chars.is_empty() {
-            return Ok(None);
+            chars.push(char);
         }
 
         let string = chars.into_iter().collect::<String>();
@@ -86,14 +106,33 @@ impl Pipe {
         )
     }
 
+    /// Reads a single char from the read end of the pipe (Some(char)) or EOF (None).
+    fn read_char(&self) -> Result<Option<char>, UECOError> {
+        const BUF_LEN: usize = 1; // Todo this is not efficient
+        let mut buf: [char; BUF_LEN] = ['\0'];
+        let buf_ptr = buf.as_mut_ptr() as * mut libc::c_void;
+        let ret = unsafe { libc::read(self.read_fd, buf_ptr, BUF_LEN) };
+
+        // check error and unwrap
+        libc_ret_to_result(ret as i32, LibcSyscall::Read)?;
+
+        // EOF
+        if ret == 0 {
+            Ok(None)
+        } else {
+            let char = buf[0];
+            Ok(Some(char))
+        }
+    }
+
     fn close_fd(&self, fd: libc::c_int) -> Result<(), UECOError> {
         let ret = unsafe { libc::close(fd) };
         libc_ret_to_result(ret, LibcSyscall::Close)
     }
 
-    /*pub fn read_fd(&self) -> i32 {
+    pub fn read_fd(&self) -> i32 {
         self.read_fd
-    }*/
+    }
 
     pub fn write_fd(&self) -> i32 {
         self.write_fd

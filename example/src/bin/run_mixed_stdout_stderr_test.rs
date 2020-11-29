@@ -1,27 +1,28 @@
-use unix_exec_output_catcher::fork_exec_and_catch;
+use unix_exec_output_catcher::{fork_exec_and_catch, OCatchStrategy};
 use std::fmt::Debug;
 
 fn main() {
     // trace activates all others
-    std::env::set_var("RUST_LOG", "trace");
+    //std::env::set_var("RUST_LOG", "trace");
     // valid values are "OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"
     // std::env::set_var("RUST_LOG", "trace,info,debug,warn,error");
     env_logger::init();
 
     let res = fork_exec_and_catch(
         "./target/debug/mixed_stdout_stderr_test",
-        vec!["mixed_stdout_stderr_test"])
+        vec!["mixed_stdout_stderr_test"],
+        OCatchStrategy::StdSeparately,)
         .unwrap();
     /*let res = fork_exec_and_catch(
         "pwd",
         vec!["pwd"])
         .unwrap();*/
 
-    assert_eq!(10, res.stdcombined_lines().len(), "The test binary must output a total amount of lines so that % 10 equals 0.");
-
     println!("{:#?}", &res);
 
-    let all_lines = res.stdcombined_lines()
+    assert_eq!(0, res.stdcombined_lines().unwrap().len() % 10, "The test binary must output a total amount of lines so that % 10 equals 0.");
+
+    let all_lines = res.stdcombined_lines().unwrap()
         .into_iter()
         .map(|s| s.replace("STDERR ", ""))
         .map(|s| s.replace("STDOUT ", ""))
