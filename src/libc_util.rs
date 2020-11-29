@@ -9,7 +9,7 @@ pub enum LibcSyscall {
     Close,
     Read,
     Execvp,
-    Waitpid
+    Waitpid,
 }
 
 pub fn libc_ret_to_result(res: libc::c_int, syscall: LibcSyscall) -> Result<(), UECOError> {

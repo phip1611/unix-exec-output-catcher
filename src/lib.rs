@@ -16,6 +16,7 @@ mod error;
 mod pipe;
 mod libc_util;
 mod exec;
+mod child;
 
 pub use exec::fork_exec_and_catch;
 
@@ -37,9 +38,9 @@ impl ProcessOutput {
 
     /// Constructor.
     fn new(stdout_lines: Vec<Rc<String>>,
-               stderr_lines: Vec<Rc<String>>,
-               stdcombined_lines: Vec<Rc<String>>,
-               exit_code: i32) -> Self {
+           stderr_lines: Vec<Rc<String>>,
+           stdcombined_lines: Vec<Rc<String>>,
+           exit_code: i32) -> Self {
         Self {
             stdout_lines,
             stderr_lines,

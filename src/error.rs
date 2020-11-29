@@ -4,7 +4,7 @@ use derive_more::Display;
 
 /// Short for U(nix) E(xec) C(atch) O(utput)-Error.
 /// Combines all errors that can happen inside this library.
-#[derive(Debug, Display)]
+#[derive(Debug, Display, Copy, Clone)]
 pub enum UECOError {
     #[display(fmt = "pipe() failed with error code {}", errno)]
     PipeFailed{errno: i32},
@@ -22,6 +22,8 @@ pub enum UECOError {
     CloseFailed{errno: i32},
     #[display(fmt = "The pipe is not yet marked as read end.")]
     PipeNotMarkedAsReadEnd,
+    #[display(fmt = "The child was already dispatched/started.")]
+    ChildAlreadyDispatched,
 
 
     // for all others

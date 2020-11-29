@@ -6,6 +6,8 @@ use crate::pipe::Pipe;
 use std::rc::Rc;
 use crate::error::UECOError;
 use crate::libc_util::{libc_ret_to_result, LibcSyscall};
+use crate::child::{ChildProcess, ProcessState};
+use std::cell::RefCell;
 
 /// Wrapper around `[libc::execvp]`.
 /// * `executable` Path or name of executable without null (\0).
@@ -13,7 +15,7 @@ use crate::libc_util::{libc_ret_to_result, LibcSyscall};
 ///          first real arg starts at index 1. index 0 is usually
 ///          the name of the executable. See:
 ///          https://unix.stackexchange.com/questions/315812/why-does-argv-include-the-program-name
-fn exec(executable: &str, args: Vec<&str>) -> Result<(), UECOError> {
+pub fn exec(executable: &str, args: Vec<&str>) -> Result<(), UECOError> {
     // panics if the string contains a \0 (null)
     let executable = CString::new(executable).expect("Executable must not contain null!");
     let executable = executable.as_c_str();
@@ -56,41 +58,43 @@ fn exec(executable: &str, args: Vec<&str>) -> Result<(), UECOError> {
 ///          the name of the executable. See:
 ///          https://unix.stackexchange.com/questions/315812/why-does-argv-include-the-program-name
 pub fn fork_exec_and_catch(executable: &str, args: Vec<&str>) -> Result<ProcessOutput, UECOError> {
-    trace!("creating stdout pipe:");
-    let mut stdout_pipe = Pipe::new()?;
-    trace!("creating stderr pipe:");
-    let mut stderr_pipe = Pipe::new()?;
+    let mut stdout_pipe = Rc::new(RefCell::new(Pipe::new()?));
+    let mut stderr_pipe = Rc::new(RefCell::new(Pipe::new()?));
 
-    let pid = unsafe { libc::fork() };
-    // unwrap error, if pid == -1
-    libc_ret_to_result(pid, LibcSyscall::Fork)?;
+    let stdout_pipe_cap = stdout_pipe.clone();
+    let stderr_pipe_cap = stderr_pipe.clone();
+    let child_after_dispatch_before_exec_fn = move || {
+        child_setup_pipes(stdout_pipe_cap.clone(), stderr_pipe_cap.clone())
+        // Err(UECOError::Unknown)
+    };
+    let child_after_dispatch_before_exec_fn = Box::new(child_after_dispatch_before_exec_fn);
+    let stdout_pipe_cap = stdout_pipe.clone();
+    let stderr_pipe_cap = stderr_pipe.clone();
+    let parent_after_dispatch_fn = move || {
+        parent_setup_pipes(stdout_pipe_cap.clone(), stderr_pipe_cap.clone())
+        // Err(UECOError::Unknown)
+    };
+    let parent_after_dispatch_fn = Box::new(parent_after_dispatch_fn);
+    let mut child = ChildProcess::new(
+        executable,
+        args,
+        child_after_dispatch_before_exec_fn,
+        parent_after_dispatch_fn,
+    );
 
-    trace!("forked successfully");
+    child.dispatch()?;
+    // call this after dispatch
+    let res = parent_catch_output(stdout_pipe.clone(), stderr_pipe.clone(), &mut child)?;
 
-    if pid == 0 {
-        // child process
-        trace!("Hello from Child!");
-
-        child_setup_pipes(&mut stdout_pipe, &mut stderr_pipe)?;
-
-        exec(executable, args)?;
-        // here be dragons (after exec())
-        // only happens if exec failed; otherwise at this point
-        // the address space of the process is replaced by the new program
-    } else {
-        // parent process
-        trace!("Hello from parent!");
-
-        parent_setup_pipes(&mut stdout_pipe, &mut stderr_pipe)?;
-        let res = parent_catch_output(&mut stdout_pipe, &mut stderr_pipe, pid)?;
-
-        return Ok(res);
-    }
-
-    Err(UECOError::Unknown)
+    Ok(res)
 }
 
-fn child_setup_pipes(stdout_pipe: &mut Pipe, stderr_pipe: &mut Pipe) -> Result<(), UECOError> {
+fn child_setup_pipes(stdout_pipe: Rc<RefCell<Pipe>>, stderr_pipe: Rc<RefCell<Pipe>>) -> Result<(), UECOError> {
+    let mut stdout_pipe = stdout_pipe.borrow_mut();
+    let mut stderr_pipe = stderr_pipe.borrow_mut();
+
+    trace!("After fork child setup code called!");
+
     // close write ends
     stdout_pipe.mark_as_child_process()?;
     stderr_pipe.mark_as_child_process()?;
@@ -104,14 +108,24 @@ fn child_setup_pipes(stdout_pipe: &mut Pipe, stderr_pipe: &mut Pipe) -> Result<(
     Ok(())
 }
 
-fn parent_setup_pipes(stdout_pipe: &mut Pipe, stderr_pipe: &mut Pipe) -> Result<(), UECOError> {
+/// CALL THIS AFTER CHILD PROCESS WAS DISPATCHED!
+fn parent_setup_pipes(stdout_pipe: Rc<RefCell<Pipe>>, stderr_pipe: Rc<RefCell<Pipe>>) -> Result<(), UECOError> {
+    let mut stdout_pipe = stdout_pipe.borrow_mut();
+    let mut stderr_pipe = stderr_pipe.borrow_mut();
+
+
+    trace!("After fork parent setup code called!");
+
     // close read ends
     stdout_pipe.mark_as_parent_process()?;
     stderr_pipe.mark_as_parent_process()?;
     Ok(())
 }
 
-fn parent_catch_output(stdout_pipe: &mut Pipe, stderr_pipe: &mut Pipe, pid: libc::pid_t) -> Result<ProcessOutput, UECOError> {
+fn parent_catch_output(stdout_pipe: Rc<RefCell<Pipe>>, stderr_pipe: Rc<RefCell<Pipe>>, child: &mut ChildProcess) -> Result<ProcessOutput, UECOError> {
+    let mut stdout_pipe = stdout_pipe.borrow_mut();
+    let mut stderr_pipe = stderr_pipe.borrow_mut();
+
     // all lines from stdout of child process land here
     let mut stdout_lines = vec![];
     // all lines from stdout of child process land here
@@ -120,17 +134,19 @@ fn parent_catch_output(stdout_pipe: &mut Pipe, stderr_pipe: &mut Pipe, pid: libc
     // they occured
     let mut stdcombined_lines = vec![];
 
-    let exit_code;
-
     // this loop works ONLY if the program terminated.
     // so "cat /dev/random" will result in an infinite loop.
-    // If so: even if our process reads faster than
-    // the child process produces; due to read() our consuming process
-    // gets blocked by the kernel (as long as the pipe lives and is not closed
-    // by the child, like when exiting).
+
+
+    let mut stdout_eof = false;
+    let mut stderr_eof = false;
     loop {
-        let mut stdout_eof = false;
-        let mut stderr_eof = false;
+        let process_is_running = child.check_state_nbl() == ProcessState::Running;
+        let process_finished = !process_is_running;
+        if process_finished && stdout_eof && stderr_eof {
+            trace!("Child finished and stdout and stderr signal EOF");
+            break;
+        }
 
         let stdout_line = stdout_pipe.read_line()?;
         let stderr_line = stderr_pipe.read_line()?;
@@ -141,6 +157,7 @@ fn parent_catch_output(stdout_pipe: &mut Pipe, stderr_pipe: &mut Pipe, pid: libc
         if let Some(l) = stdout_line {
             stdout_lines.push(l.clone());
             stdcombined_lines.push(l);
+            stdout_eof = true;
         } else {
             stdout_eof = true;
         }
@@ -148,48 +165,22 @@ fn parent_catch_output(stdout_pipe: &mut Pipe, stderr_pipe: &mut Pipe, pid: libc
         if let Some(l) = stderr_line {
             stderr_lines.push(l.clone());
             stdcombined_lines.push(l);
+            stderr_eof = false;
         } else {
             stderr_eof = true;
         }
-
-
-        let (finished, code) = child_process_done(pid);
-        if finished && stdout_eof && stderr_eof {
-            exit_code = code;
-            break;
-        }
     }
+    trace!("Excited read loop!");
 
     let res = ProcessOutput::new(
         stdout_lines,
         stderr_lines,
         stdcombined_lines,
-        exit_code,
+        // exit_code
+        0 // TODO
     );
 
     Ok(res)
 }
 
-fn child_process_done(pid: libc::pid_t) -> (bool, i32) {
-    let wait_flags = libc::WNOHANG;
-    let mut status_code: libc::c_int = 0;
-    let status_code_ptr = &mut status_code as * mut libc::c_int;
 
-    let _ret = unsafe { libc::waitpid(pid, status_code_ptr, wait_flags) };
-
-    // IDE doesn't find this functions but they exist
-
-    // returns true if the child terminated normally
-    let exited_normally: bool = libc::WIFEXITED(status_code);
-    // returns true if the child was terminated by signal
-    let exited_by_signal: bool = libc::WIFSIGNALED(status_code);
-    // exit code (0 = success, or > 1 = error)
-    let exit_code: libc::c_int = libc::WEXITSTATUS(status_code);
-
-
-    if exited_normally || exited_by_signal {
-        (true, exit_code)
-    } else {
-        (false, 0)
-    }
-}

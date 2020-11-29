@@ -64,7 +64,10 @@ impl Pipe {
             libc_ret_to_result(ret as i32, LibcSyscall::Read)?;
 
             // EOF
-            if ret == 0 { break };
+            if ret == 0 {
+                trace!("EOF found");
+                break
+            };
             let char = buf[0];
             if char == '\n' {
                 trace!("newline (\\n) found");
@@ -74,7 +77,6 @@ impl Pipe {
         }
 
         if chars.is_empty() {
-            trace!("EOF reached");
             return Ok(None);
         }
 

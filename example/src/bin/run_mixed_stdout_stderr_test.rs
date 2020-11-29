@@ -17,6 +17,8 @@ fn main() {
         vec!["pwd"])
         .unwrap();*/
 
+    assert_eq!(10, res.stdcombined_lines().len(), "The test binary must output a total amount of lines so that % 10 equals 0.");
+
     println!("{:#?}", &res);
 
     let all_lines = res.stdcombined_lines()
@@ -56,9 +58,9 @@ fn is_sorted<T>(data: &[T]) -> bool
     for i in 0..window_count {
         let x = i * 10;
         let non_overlapping_window = &data[x..x+10];
-        let sorted = non_overlapping_window.windows(2).all((|wi| {
+        let sorted = non_overlapping_window.windows(2).all(|wi| {
             wi[0] <= wi[1]
-        }));
+        });
         if !sorted {
             return false;
         }
