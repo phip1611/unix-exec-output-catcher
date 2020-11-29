@@ -2,6 +2,7 @@
 
 use crate::error::UECOError;
 
+/// Syscall, that resulted in an error.
 pub enum LibcSyscall {
     Fork,
     Pipe,
@@ -12,6 +13,8 @@ pub enum LibcSyscall {
     Waitpid,
 }
 
+/// Convenient function that returns the return value of a libc function into
+/// an rust result.
 pub fn libc_ret_to_result(res: libc::c_int, syscall: LibcSyscall) -> Result<(), UECOError> {
     if res == 0 {
         Ok(())
@@ -26,6 +29,7 @@ pub fn libc_ret_to_result(res: libc::c_int, syscall: LibcSyscall) -> Result<(), 
     }
 }
 
+/// Translates the libc syscall to an error of this lib.
 fn syscall_to_uecoerror(syscall: LibcSyscall, errno: libc::c_int) -> UECOError {
     match syscall {
         LibcSyscall::Fork => { UECOError::ForkFailed {errno} }

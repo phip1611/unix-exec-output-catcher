@@ -11,6 +11,8 @@ lines in the order they appeared. That's the unique feature of this crate.
 The call to `fork_exec_and_catch()` is blocking. If the program produces infinite output to
 stdout or stderr, this function will never return. If the program produces 1GB of output
 this function will consume 1GB of memory. See examples directory for example code.
+Please read the warnings/information in `OCatchStrategy`. The strategy determines
+in what way "STDCOMBINED" get's collected.
 
 ## Example
 ```rust

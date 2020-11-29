@@ -1,14 +1,14 @@
 use unix_exec_output_catcher::{fork_exec_and_catch, OCatchStrategy};
-use std::fmt::Debug;
 
 fn main() {
     // trace activates all others
-    //std::env::set_var("RUST_LOG", "trace");
+    std::env::set_var("RUST_LOG", "trace");
     // valid values are "OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"
     // std::env::set_var("RUST_LOG", "trace,info,debug,warn,error");
     env_logger::init();
 
     let res = fork_exec_and_catch(
+        // build the binary first, like: "cargo build --all --all-targets"
         "./target/debug/mixed_stdout_stderr_test",
         vec!["mixed_stdout_stderr_test"],
         OCatchStrategy::StdSeparately,)
@@ -20,9 +20,10 @@ fn main() {
 
     println!("{:#?}", &res);
 
-    assert_eq!(0, res.stdcombined_lines().unwrap().len() % 10, "The test binary must output a total amount of lines so that % 10 equals 0.");
+    // corresponds to the binary `mixed_stdout_stderr_test`
+    assert_eq!(0, res.stdcombined_lines().len() % 10, "The test binary must output a total amount of lines so that % 10 equals 0.");
 
-    let all_lines = res.stdcombined_lines().unwrap()
+    let all_lines = res.stdcombined_lines()
         .into_iter()
         .map(|s| s.replace("STDERR ", ""))
         .map(|s| s.replace("STDOUT ", ""))
@@ -38,9 +39,7 @@ fn main() {
         .map(|v| v[0].to_string())
         .collect::<Vec<String>>();
 
-    println!("Is output in right order?");
-
-
+    println!("Check: Is output in right order?");
     let is_sorted = is_sorted(&all_lines);
     if is_sorted {
         println!("YES")

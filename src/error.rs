@@ -26,6 +26,6 @@ pub enum UECOError {
     ChildAlreadyDispatched,
 
 
-    // for all others
+    /// For all other errors.
     Unknown,
 }

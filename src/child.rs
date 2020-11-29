@@ -3,41 +3,62 @@
 use crate::error::UECOError;
 use crate::libc_util::{libc_ret_to_result, LibcSyscall};
 use crate::exec::exec;
-use std::cell::RefCell;
 use crate::pipe::Pipe;
-use std::rc::Rc;
+use std::sync::{Mutex, Arc};
+use std::fmt::Debug;
 
+/// The state in that a child process can be.
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum ProcessState {
+    /// Waiting for dispatch.
     Ready,
+    /// Dispatched.
     Running,
-    Failed,
+    /// Finished with error code 0.
     FinishedSuccess,
+    /// Finished with error code != 0.
     FinishedError(i32),
 }
 
-// #[derive(Debug)]
+/// Abstraction over a child process.
 pub struct ChildProcess {
+    /// String of the executable. Can also be a name
+    /// that will be looked up inside $PATH during execution.
     executable: String,
+    /// All args of the program including args[0] that refers to
+    /// the name of the binary.
     args: Vec<String>,
+    /// Once the process has been dispatched/forked, the pid of the child
+    /// is set here.
     pid: Option<libc::pid_t>,
+    /// Once the process exited, the exit code stands here.
     exit_code: Option<i32>,
+    /// The current process state.
     state: ProcessState,
-    stdout_pipe: Rc<RefCell<Pipe>>,
-    stderr_pipe: Rc<RefCell<Pipe>>,
-    /// Code that should be executed in child after fork()
-    /// but before exec().
-    child_after_dispatch_before_exec_fn: Box<dyn FnMut() -> Result<(), UECOError>>,
+    /// Reference to the pipe where STDOUT gets redirected.
+    stdout_pipe: Arc<Mutex<Pipe>>,
+    /// Reference to the pipe where STDERR gets redirected.
+    stderr_pipe: Arc<Mutex<Pipe>>,
+    /// Code that should be executed in child after fork() but before exec().
+    child_after_dispatch_before_exec_fn: Box<dyn Send + FnMut() -> Result<(), UECOError>>,
     /// Code that should be executed in parent after fork()
-    parent_after_dispatch_fn: Box<dyn FnMut() -> Result<(), UECOError>>
+    parent_after_dispatch_fn: Box<dyn Send + FnMut() -> Result<(), UECOError>>
 }
 
 impl ChildProcess {
+    /// Constructor.
+    /// * `executable` executable or path to executable
+    /// * `args` Args vector. First real arg starts at index 1.
+    /// * `child_after_dispatch_before_exec_fn` Code that should be executed in child after fork() but before exec().
+    /// * `parent_after_dispatch_fn` Code that should be executed in parent after fork()
+    /// * `stdout_pipe` Reference to the pipe where STDOUT gets redirected.
+    /// * `stderr_pipe` Reference to the pipe where STDERR gets redirected.
     pub fn new(executable: &str,
                args: Vec<&str>,
-               child_after_dispatch_before_exec_fn: Box<dyn FnMut() -> Result<(), UECOError>>,
-               parent_after_dispatch_fn: Box<dyn FnMut() -> Result<(), UECOError>>,
-               stdout_pipe: Rc<RefCell<Pipe>>, stderr_pipe: Rc<RefCell<Pipe>>,
+               child_after_dispatch_before_exec_fn: Box<dyn Send + FnMut() -> Result<(), UECOError>>,
+               parent_after_dispatch_fn: Box<dyn Send + FnMut() -> Result<(), UECOError>>,
+               stdout_pipe: Arc<Mutex<Pipe>>,
+               stderr_pipe: Arc<Mutex<Pipe>>,
     ) -> Self {
         ChildProcess {
             executable: executable.to_string(),
@@ -52,6 +73,8 @@ impl ChildProcess {
         }
     }
 
+    /// Forks the process. This mean child and parent will run from that
+    /// point concurrently.
     pub fn dispatch(&mut self) -> Result<libc::pid_t, UECOError> {
         self.state = ProcessState::Running;
         let pid = unsafe { libc::fork() };
@@ -123,13 +146,16 @@ impl ChildProcess {
         self.state
     }
 
+    /// Getter for exit code.
     pub fn exit_code(&self) -> Option<i32> {
         self.exit_code
     }
-    pub fn stdout_pipe(&self) -> &Rc<RefCell<Pipe>> {
+    /// Getter for stdout_pipe.
+    pub fn stdout_pipe(&self) -> &Arc<Mutex<Pipe>> {
         &self.stdout_pipe
     }
-    pub fn stderr_pipe(&self) -> &Rc<RefCell<Pipe>> {
+    /// Getter for stderr_pipe.
+    pub fn stderr_pipe(&self) -> &Arc<Mutex<Pipe>> {
         &self.stderr_pipe
     }
 }

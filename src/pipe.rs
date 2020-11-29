@@ -1,8 +1,9 @@
-//! Abstraction over UNIX-pipe specific for the use case here.
+//! Abstraction over UNIX-pipe. It's specific for the use case here.
 
 use crate::error::UECOError;
 use crate::libc_util::{libc_ret_to_result, LibcSyscall};
 use crate::{OCatchStrategy};
+use std::time::Instant;
 
 /// Convenient wrapper around the pipes that we
 /// need for the desired output catch strategy.
@@ -32,14 +33,20 @@ impl CatchPipes {
     }
 }
 
+/// The index inside the [i32;2]-array that is filled by `pipe()`.
 #[derive(Debug, PartialEq)]
 pub enum PipeEnd {
     Read = 0,
     Write = 1,
 }
 
+/// Abstraction over pipe.
 #[derive(Debug)]
 pub struct Pipe {
+    /// This is filled lazy.
+    /// This can't be done on initialization because the pipes must be created,
+    /// the process must be forked and after that, in each address space
+    /// the pipe is marked es the right end.
     end: Option<PipeEnd>,
     read_fd: libc::c_int,
     write_fd: libc::c_int,
@@ -47,6 +54,7 @@ pub struct Pipe {
 
 impl Pipe {
 
+    /// Constructor.
     pub(crate) fn new() -> Result<Self, UECOError> {
         let mut fds: [libc::c_int; 2] = [0, 0];
         let ret = unsafe { libc::pipe(fds.as_mut_ptr()) };
@@ -79,13 +87,14 @@ impl Pipe {
     /// Returns ERR if a syscall failed. Returns OK(None) if
     /// EOF was reached. Returns (Ok(Some(String)) if a new line
     /// was read.
-    pub(crate) fn read_line(&self) -> Result<Option<String>, UECOError> {
+    pub(crate) fn read_line(&self) -> Result<Option<(Instant, String)>, UECOError> {
         if *self.end.as_ref().expect("Kind of Pipeend must be specified at this point") != PipeEnd::Read {
             return Err(UECOError::PipeNotMarkedAsReadEnd);
         }
 
         let mut chars = Vec::new();
 
+        let instant;
         loop {
             // read from file descriptor byte by byte (each iteration results in a syscall)
             let char = self.read_char()?;
@@ -94,17 +103,19 @@ impl Pipe {
             }
             let char = char.unwrap();
             if char == '\n' {
+                instant = Instant::now();
                 trace!("newline (\\n) found");
                 break
             }
             chars.push(char);
         }
-
         let string = chars.into_iter().collect::<String>();
         Ok(
-            Some(string)
+            Some((instant, string))
         )
     }
+
+
 
     /// Reads a single char from the read end of the pipe (Some(char)) or EOF (None).
     fn read_char(&self) -> Result<Option<char>, UECOError> {
@@ -130,10 +141,11 @@ impl Pipe {
         libc_ret_to_result(ret, LibcSyscall::Close)
     }
 
-    pub fn read_fd(&self) -> i32 {
+    /*pub fn read_fd(&self) -> i32 {
         self.read_fd
-    }
+    }*/
 
+    /// Getter for write_fd.
     pub fn write_fd(&self) -> i32 {
         self.write_fd
     }

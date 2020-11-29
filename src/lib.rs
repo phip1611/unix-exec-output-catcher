@@ -29,10 +29,20 @@ pub use exec::fork_exec_and_catch;
 /// * or `stdout_lines` and `stderr_lines` are `None`, but `stdcombined_lines` is in correct order
 #[derive(Debug)]
 pub struct ProcessOutput {
+    /// Exit code of the process. 0 is success, >1 is error.
+    /// See https://man7.org/linux/man-pages/man3/errno.3.html
     exit_code: i32,
+    /// * `None` for `[crate::OCatchStrategy::StdCombined]`
+    /// * `Some` for `[crate::OCatchStrategy::StdSeparately]`
     stdout_lines: Option<Vec<Rc<String>>>,
+    /// * `None` for `[crate::OCatchStrategy::StdCombined]`
+    /// * `Some` for `[crate::OCatchStrategy::StdSeparately]`
     stderr_lines: Option<Vec<Rc<String>>>,
-    stdcombined_lines: Option<Vec<Rc<String>>>,
+    /// * All output lines in correct order for `[crate::OCatchStrategy::StdCombined]`
+    /// * All output lines in not guaranteed correct order for `[crate::OCatchStrategy::StdSeparately]`
+    stdcombined_lines: Vec<Rc<String>>,
+    /// The strategy that was used. See `[crate::OCatchStrategy::StdSeparately]`.
+    strategy: OCatchStrategy,
 }
 
 impl ProcessOutput {
@@ -40,13 +50,16 @@ impl ProcessOutput {
     /// Constructor.
     fn new(stdout_lines: Option<Vec<Rc<String>>>,
            stderr_lines: Option<Vec<Rc<String>>>,
-           stdcombined_lines: Option<Vec<Rc<String>>>,
-           exit_code: i32) -> Self {
+           stdcombined_lines: Vec<Rc<String>>,
+           exit_code: i32,
+           strategy: OCatchStrategy,
+           ) -> Self {
         Self {
             stdout_lines,
             stderr_lines,
             stdcombined_lines,
             exit_code,
+            strategy
         }
     }
 
@@ -56,18 +69,31 @@ impl ProcessOutput {
     pub fn stderr_lines(&self) -> Option<&Vec<Rc<String>>> {
         self.stderr_lines.as_ref()
     }
-    pub fn stdcombined_lines(&self) -> Option<&Vec<Rc<String>>> {
-        self.stdcombined_lines.as_ref()
+    pub fn stdcombined_lines(&self) -> &Vec<Rc<String>> {
+        &self.stdcombined_lines
+    }
+    pub fn exit_code(&self) -> i32 {
+        self.exit_code
+    }
+    pub fn strategy(&self) -> OCatchStrategy {
+        self.strategy
     }
 }
 
+/// Determines the strategy that is used to get STDOUT, STDERR, and "STDCOMBINED".
+/// Both has advantages and disadvantages.
 #[derive(Debug, Display, Copy, Clone)]
 pub enum OCatchStrategy {
     /// Catches all output lines of STDOUT and STDERR in correct order on a line
-    /// by line base but there is no way to find out STDOUT-only or STDERR-only lines.
+    /// by line base. There is no way to find out STDOUT-only or STDERR-only lines.
     StdCombined,
     /// Catches all output lines from STDOUT and STDERR separately. There is also a
-    /// "STDCOMBINED" vector, but the order is not 100% correct. It's only approximately correct.
+    /// "STDCOMBINED" vector, but the order is not 100% correct.  It's only approximately correct
+    /// on a best effort base. If between each STDOUT/STDERR-alternating output is ≈100µs
+    /// (a few thousand cycles) it should be definitely fine, but there is no guarantee for that.
+    /// Also the incorrectness is not deterministic. This is because
+    /// STDOUT and STDERR are two separate streams. Scheduling and buffering result in
+    /// different results.
     StdSeparately,
 }
 
