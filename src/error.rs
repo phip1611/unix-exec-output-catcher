@@ -12,6 +12,8 @@ pub enum UECOError {
     Dup2Failed{errno: i32},
     #[display(fmt = "execvp() failed with error code {}", errno)]
     ExecvpFailed{errno: i32},
+    #[display(fmt = "waitpid() failed with error code {}", errno)]
+    WaitpidFailed{errno: i32},
     #[display(fmt = "read() failed with error code {}", errno)]
     ReadFailed{errno: i32},
     #[display(fmt = "fork() failed with error code {}", errno)]

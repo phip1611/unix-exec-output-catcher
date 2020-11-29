@@ -9,6 +9,7 @@ pub enum LibcSyscall {
     Close,
     Read,
     Execvp,
+    Waitpid
 }
 
 pub fn libc_ret_to_result(res: libc::c_int, syscall: LibcSyscall) -> Result<(), UECOError> {
@@ -33,5 +34,6 @@ fn syscall_to_uecoerror(syscall: LibcSyscall, errno: libc::c_int) -> UECOError {
         LibcSyscall::Close => { UECOError::CloseFailed {errno} }
         LibcSyscall::Read => { UECOError::ReadFailed {errno} }
         LibcSyscall::Execvp => { UECOError::ExecvpFailed {errno} }
+        LibcSyscall::Waitpid => { UECOError::WaitpidFailed {errno} }
     }
 }

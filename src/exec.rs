@@ -82,7 +82,7 @@ pub fn fork_exec_and_catch(executable: &str, args: Vec<&str>) -> Result<ProcessO
         trace!("Hello from parent!");
 
         parent_setup_pipes(&mut stdout_pipe, &mut stderr_pipe)?;
-        let res = parent_catch_output(&mut stdout_pipe, &mut stderr_pipe)?;
+        let res = parent_catch_output(&mut stdout_pipe, &mut stderr_pipe, pid)?;
 
         return Ok(res);
     }
@@ -111,7 +111,7 @@ fn parent_setup_pipes(stdout_pipe: &mut Pipe, stderr_pipe: &mut Pipe) -> Result<
     Ok(())
 }
 
-fn parent_catch_output(stdout_pipe: &mut Pipe, stderr_pipe: &mut Pipe) -> Result<ProcessOutput, UECOError> {
+fn parent_catch_output(stdout_pipe: &mut Pipe, stderr_pipe: &mut Pipe, pid: libc::pid_t) -> Result<ProcessOutput, UECOError> {
     // all lines from stdout of child process land here
     let mut stdout_lines = vec![];
     // all lines from stdout of child process land here
@@ -119,6 +119,8 @@ fn parent_catch_output(stdout_pipe: &mut Pipe, stderr_pipe: &mut Pipe) -> Result
     // all lines from both streams land here in the order
     // they occured
     let mut stdcombined_lines = vec![];
+
+    let exit_code;
 
     // this loop works ONLY if the program terminated.
     // so "cat /dev/random" will result in an infinite loop.
@@ -150,14 +152,44 @@ fn parent_catch_output(stdout_pipe: &mut Pipe, stderr_pipe: &mut Pipe) -> Result
             stderr_eof = true;
         }
 
-        if stderr_eof && stdout_eof { break; }
+
+        let (finished, code) = child_process_done(pid);
+        if finished && stdout_eof && stderr_eof {
+            exit_code = code;
+            break;
+        }
     }
 
     let res = ProcessOutput::new(
         stdout_lines,
         stderr_lines,
-        stdcombined_lines
+        stdcombined_lines,
+        exit_code,
     );
 
     Ok(res)
+}
+
+fn child_process_done(pid: libc::pid_t) -> (bool, i32) {
+    let wait_flags = libc::WNOHANG;
+    let mut status_code: libc::c_int = 0;
+    let status_code_ptr = &mut status_code as * mut libc::c_int;
+
+    let _ret = unsafe { libc::waitpid(pid, status_code_ptr, wait_flags) };
+
+    // IDE doesn't find this functions but they exist
+
+    // returns true if the child terminated normally
+    let exited_normally: bool = libc::WIFEXITED(status_code);
+    // returns true if the child was terminated by signal
+    let exited_by_signal: bool = libc::WIFSIGNALED(status_code);
+    // exit code (0 = success, or > 1 = error)
+    let exit_code: libc::c_int = libc::WEXITSTATUS(status_code);
+
+
+    if exited_normally || exited_by_signal {
+        (true, exit_code)
+    } else {
+        (false, 0)
+    }
 }

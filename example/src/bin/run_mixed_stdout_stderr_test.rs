@@ -17,6 +17,7 @@ fn main() {
         vec!["pwd"])
         .unwrap();*/
 
+    println!("{:#?}", &res);
 
     let all_lines = res.stdcombined_lines()
         .into_iter()
