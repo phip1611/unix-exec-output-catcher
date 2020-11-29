@@ -115,7 +115,21 @@ impl Pipe {
         )
     }
 
+    /// Connects stdout of the process to the write end of the pipe.
+    /// You probably only want to do this in the child process.
+    pub(crate) fn connect_to_stdout(&self) -> Result<(), UECOError> {
+        let res = unsafe { libc::dup2(self.write_fd, libc::STDOUT_FILENO) };
+        // unwrap error, if res == -1
+        libc_ret_to_result(res, LibcSyscall::Dup2)
+    }
 
+    /// Connects stderr of the process to the write end of the pipe.
+    /// You probably only want to do this in the child process.
+    pub(crate) fn connect_to_stderr(&self) -> Result<(), UECOError> {
+        let res = unsafe { libc::dup2(self.write_fd, libc::STDERR_FILENO) };
+        // unwrap error, if res == -1
+        libc_ret_to_result(res, LibcSyscall::Dup2)
+    }
 
     /// Reads a single char from the read end of the pipe (Some(char)) or EOF (None).
     fn read_char(&self) -> Result<Option<char>, UECOError> {
@@ -136,21 +150,9 @@ impl Pipe {
         }
     }
 
+    /// Closes the specified file descriptor.
     fn close_fd(&self, fd: libc::c_int) -> Result<(), UECOError> {
         let ret = unsafe { libc::close(fd) };
         libc_ret_to_result(ret, LibcSyscall::Close)
     }
-
-    /*pub fn read_fd(&self) -> i32 {
-        self.read_fd
-    }*/
-
-    /// Getter for write_fd.
-    pub fn write_fd(&self) -> i32 {
-        self.write_fd
-    }
-
-    /*pub fn end(&self) -> &Option<PipeEnd> {
-        &self.end
-    }*/
 }

@@ -14,15 +14,27 @@ this function will consume 1GB of memory. See examples directory for example cod
 Please read the warnings/information in `OCatchStrategy`. The strategy determines
 in what way "STDCOMBINED" get's collected.
 
+## Will my `"STDCOMBINED"` output (STDOUT + STDERR) be in right order?
+* `OCatchStrategy::StdCombined`: definitely
+* `OCatchStrategy::StdSeparately`: most probably, but there is no guarantee. If there are alternating
+   prints to STDOUT/STDERR in a row without a few hundreds microseconds in between, it will probably 
+   happen due to scheduling and in-kernel buffering that STDOUT/STDERR is not captured in correct
+   order. 
+See Rust comments for more information.
+
 ## Example
 ```rust
-use unix_exec_output_catcher::fork_exec_and_catch;
+use unix_exec_output_catcher::{fork_exec_and_catch, OCatchStrategy};
 
 fn main() {
     // executes "ls" with "-la" as argument.
     // this is equivalent to running "$ ls -la" in your shell.
     // The line by line output is stored inside the result.
-    let res = fork_exec_and_catch("ls", vec!["ls", "-la"]);
+    let res = fork_exec_and_catch(
+        "ls", 
+        vec!["ls", "-la"], 
+        OCatchStrategy::StdSeparately
+    );
     println!("{:#?}", res.unwrap());
 }
 ```

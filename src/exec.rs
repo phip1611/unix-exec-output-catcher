@@ -84,12 +84,8 @@ fn setup_and_execute_strategy_combined(executable: &str, args: Vec<&str>, cp: Ca
     let child_setup = move || {
         let mut pipe_closure = pipe_closure.lock().unwrap();
         pipe_closure.mark_as_child_process()?;
-        let res = unsafe { libc::dup2(pipe_closure.write_fd(), libc::STDOUT_FILENO) };
-        // unwrap error, if res == -1
-        libc_ret_to_result(res, LibcSyscall::Dup2)?;
-        let res = unsafe { libc::dup2(pipe_closure.write_fd(), libc::STDERR_FILENO) };
-        // unwrap error, if res == -1
-        libc_ret_to_result(res, LibcSyscall::Dup2)?;
+        pipe_closure.connect_to_stdout()?;
+        pipe_closure.connect_to_stderr()?;
         Ok(())
     };
     let pipe_closure = pipe.clone();
@@ -125,12 +121,8 @@ fn setup_and_execute_strategy_separately(executable: &str, args: Vec<&str>, cp: 
         let mut stderr_pipe_closure = stderr_pipe_closure.lock().unwrap();
         stdout_pipe_closure.mark_as_child_process()?;
         stderr_pipe_closure.mark_as_child_process()?;
-        let res = unsafe { libc::dup2(stdout_pipe_closure.write_fd(), libc::STDOUT_FILENO) };
-        // unwrap error, if res == -1
-        libc_ret_to_result(res, LibcSyscall::Dup2)?;
-        let res = unsafe { libc::dup2(stderr_pipe_closure.write_fd(), libc::STDERR_FILENO) };
-        // unwrap error, if res == -1
-        libc_ret_to_result(res, LibcSyscall::Dup2)?;
+        stdout_pipe_closure.connect_to_stdout()?;
+        stderr_pipe_closure.connect_to_stderr()?;
         Ok(())
     };
     let stdout_pipe_closure = stdout_pipe.clone();

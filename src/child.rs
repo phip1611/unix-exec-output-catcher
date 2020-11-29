@@ -118,6 +118,11 @@ impl ChildProcess {
 
         // IDE doesn't find this functions but they exist
 
+        // I'm not sure on this one..
+        // maybe my assumption is wrong and "child process started"
+        // is actually printed when the process is finished.
+        // But this is not important for the problem here.
+
         // process didn't started running yet
         if ret == 0 {
             trace!("Child process not started yet");

@@ -1,10 +1,10 @@
 use std::thread::sleep;
 use std::time::Duration;
 
-const ITERATIONS: usize = 2000;
+const ITERATIONS: usize = 100;
 // the less this value is the more likely that the total captured
 // output of stdout and stderr combined is out of order
-const DELAY_US: u64 = 150;
+const DELAY_US: u64 = 50;
 
 /// This binary can be used to check the output catching of my lib.
 /// It produces a mixture of STDOUT and STDERR lines in a defined
