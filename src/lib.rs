@@ -22,8 +22,10 @@ mod reader;
 
 pub use exec::fork_exec_and_catch;
 
-/// Holds the information from the executed process.
-/// It depends on the `strategy` option of [`crate::fork_exec_and_catch`] whether
+/// Holds the information from the executed process. It depends on the `strategy` option of
+/// [`crate::fork_exec_and_catch`] how the output is structured.
+///
+/// The strategy results in the following two kinds of outputs:
 /// * `stdout_lines` and `stderr_lines` are correct but `stdcombined_lines` is only
 ///   maybe in correct order
 /// * or `stdout_lines` and `stderr_lines` are `None`, but `stdcombined_lines` is in correct order
@@ -63,18 +65,23 @@ impl ProcessOutput {
         }
     }
 
+    /// Getter for `stdout_lines`. This is only available if [`OCatchStrategy::StdSeparately`] was used.
     pub fn stdout_lines(&self) -> Option<&Vec<Rc<String>>> {
         self.stdout_lines.as_ref()
     }
+    /// Getter for `stderr_lines`. This is only available if [`OCatchStrategy::StdSeparately`] was used.
     pub fn stderr_lines(&self) -> Option<&Vec<Rc<String>>> {
         self.stderr_lines.as_ref()
     }
+    /// Getter for `stdcombined_lines`. The correctness of the ordering depends on the used [`OCatchStrategy`].
     pub fn stdcombined_lines(&self) -> &Vec<Rc<String>> {
         &self.stdcombined_lines
     }
+    /// Getter for `exit_code` of the executed child process.
     pub fn exit_code(&self) -> i32 {
         self.exit_code
     }
+    /// Getter for the used [`OCatchStrategy`].
     pub fn strategy(&self) -> OCatchStrategy {
         self.strategy
     }
