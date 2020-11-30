@@ -23,7 +23,7 @@ mod reader;
 pub use exec::fork_exec_and_catch;
 
 /// Holds the information from the executed process.
-/// It depends on the `strategy` option of `[crate::fork_exec_and_catch]` whether
+/// It depends on the `strategy` option of [`crate::fork_exec_and_catch`] whether
 /// * `stdout_lines` and `stderr_lines` are correct but `stdcombined_lines` is only
 ///   maybe in correct order
 /// * or `stdout_lines` and `stderr_lines` are `None`, but `stdcombined_lines` is in correct order
@@ -32,16 +32,16 @@ pub struct ProcessOutput {
     /// Exit code of the process. 0 is success, >1 is error.
     /// See https://man7.org/linux/man-pages/man3/errno.3.html
     exit_code: i32,
-    /// * `None` for `[crate::OCatchStrategy::StdCombined]`
-    /// * `Some` for `[crate::OCatchStrategy::StdSeparately]`
+    /// * `None` for [`crate::OCatchStrategy::StdCombined`]
+    /// * `Some` for [`crate::OCatchStrategy::StdSeparately`]
     stdout_lines: Option<Vec<Rc<String>>>,
-    /// * `None` for `[crate::OCatchStrategy::StdCombined]`
-    /// * `Some` for `[crate::OCatchStrategy::StdSeparately]`
+    /// * `None` for [`crate::OCatchStrategy::StdCombined`]
+    /// * `Some` for [`crate::OCatchStrategy::StdSeparately`]
     stderr_lines: Option<Vec<Rc<String>>>,
-    /// * All output lines in correct order for `[crate::OCatchStrategy::StdCombined]`
-    /// * All output lines in not guaranteed correct order for `[crate::OCatchStrategy::StdSeparately]`
+    /// * All output lines in correct order for [`crate::OCatchStrategy::StdCombined`]
+    /// * All output lines in not guaranteed correct order for [`crate::OCatchStrategy::StdSeparately`]
     stdcombined_lines: Vec<Rc<String>>,
-    /// The strategy that was used. See `[crate::OCatchStrategy::StdSeparately]`.
+    /// The strategy that was used. See [`crate::OCatchStrategy::StdSeparately`].
     strategy: OCatchStrategy,
 }
 

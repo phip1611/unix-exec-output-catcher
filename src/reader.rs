@@ -25,7 +25,7 @@ pub trait OutputReader {
 
 }
 
-/// Reader for `[crate::OCatchStrategy::StdCombined]`.
+/// Reader for [`crate::OCatchStrategy::StdCombined`].
 /// Catches `"STDCOMBINED"` in right order but `STDOUT`
 /// and `STDERR` not at all.
 // #[derive(Debug)]
@@ -80,7 +80,7 @@ impl <'a> OutputReader for SimpleOutputReader<'a> {
     }
 }
 
-/// Reader for `[crate::OCatchStrategy::StdSeparately]`.
+/// Reader for [`crate::OCatchStrategy::StdSeparately`].
 /// Catches `STDOUT` and `STDERR`, but the order of
 /// `"STDCOMBINED"` is only maybe correct.
 // #[derive(Debug)]
