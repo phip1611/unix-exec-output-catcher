@@ -13,7 +13,7 @@ use derive_more::Display;
 #[macro_use]
 extern crate log;
 
-mod error;
+pub mod error;
 mod pipe;
 mod libc_util;
 mod exec;

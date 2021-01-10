@@ -1,6 +1,7 @@
 //! Contains all errors that can happen in this library.
 
 use derive_more::Display;
+use std::error::Error;
 
 /// Short for U(nix) E(xec) C(atch) O(utput)-Error.
 /// Combines all errors that can happen inside this library.
@@ -29,3 +30,7 @@ pub enum UECOError {
     /// For all other errors.
     Unknown,
 }
+
+// IDE might show that display is not implemented but it gets implemented
+// during build by "derive_more" crate
+impl Error for UECOError {}
