@@ -29,7 +29,7 @@ pub fn exec(executable: &str, args: Vec<&str>) -> Result<(), UECOError> {
     // Build null terminated array with pointers null terminated c-strings
     let mut args_nl = args.iter()
         .map(|cs| cs.as_ptr())
-        .collect::<Vec<* const i8>>();
+        .collect::<Vec<* const libc::c_char>>();
     args_nl.push(std::ptr::null());
 
 
