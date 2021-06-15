@@ -1,5 +1,6 @@
 use unix_exec_output_catcher::{fork_exec_and_catch, OCatchStrategy};
 
+#[test]
 fn main() {
     // trace activates all others
     std::env::set_var("RUST_LOG", "trace");

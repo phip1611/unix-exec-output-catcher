@@ -7,17 +7,17 @@
 //! My library gives you access to `stdout`, `stderr`, **and** `"stdcombined"`. This way you get all
 //! output lines in the order they appeared. That's the unique feature of this crate.
 
-use std::rc::Rc;
 use derive_more::Display;
+use std::rc::Rc;
 
 #[macro_use]
 extern crate log;
 
-pub mod error;
-mod pipe;
-mod libc_util;
-mod exec;
 mod child;
+pub mod error;
+mod exec;
+mod libc_util;
+mod pipe;
 mod reader;
 
 pub use exec::fork_exec_and_catch;
@@ -48,20 +48,20 @@ pub struct ProcessOutput {
 }
 
 impl ProcessOutput {
-
     /// Constructor.
-    fn new(stdout_lines: Option<Vec<Rc<String>>>,
-           stderr_lines: Option<Vec<Rc<String>>>,
-           stdcombined_lines: Vec<Rc<String>>,
-           exit_code: i32,
-           strategy: OCatchStrategy,
-           ) -> Self {
+    fn new(
+        stdout_lines: Option<Vec<Rc<String>>>,
+        stderr_lines: Option<Vec<Rc<String>>>,
+        stdcombined_lines: Vec<Rc<String>>,
+        exit_code: i32,
+        strategy: OCatchStrategy,
+    ) -> Self {
         Self {
             stdout_lines,
             stderr_lines,
             stdcombined_lines,
             exit_code,
-            strategy
+            strategy,
         }
     }
 
@@ -107,7 +107,7 @@ pub enum OCatchStrategy {
 #[cfg(test)]
 mod tests {
 
-    use super::*;
+    // use super::*;
 
     // RUst tests doesn't work with fork, dup2 and other fun :)
     // weird output.. use the test binary instead!
