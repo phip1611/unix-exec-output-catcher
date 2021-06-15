@@ -1,4 +1,20 @@
 language: rust
 rust:
   - stable
+  - nightly
 cache: cargo
+
+script:
+  # add a few UNIX targets
+  - rustup target add arm-unknown-linux-gnueabi
+  - rustup target add x86_64-apple-darwin
+  - rustup target add x86_64-unknown-linux-gnu
+
+  - cargo build --target arm-unknown-linux-gnueabi
+  - cargo build --target x86_64-apple-darwin
+  - cargo build --target x86_64-unknown-linux-gnu
+
+  # this will only build on UNIX systems; it requires "cc" installed
+  - cargo test --target arm-unknown-linux-gnueabi
+  - cargo test --target x86_64-apple-darwin
+  - cargo test --target x86_64-unknown-linux-gnu
