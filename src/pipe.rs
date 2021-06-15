@@ -2,7 +2,7 @@
 
 use crate::error::UECOError;
 use crate::libc_util::{libc_ret_to_result, LibcSyscall};
-use crate::{OCatchStrategy};
+use crate::OCatchStrategy;
 use std::time::Instant;
 
 /// Convenient wrapper around the pipes that we
@@ -10,25 +10,17 @@ use std::time::Instant;
 #[derive(Debug)]
 pub enum CatchPipes {
     Combined(Pipe),
-    Separately{stdout: Pipe, stderr: Pipe}
+    Separately { stdout: Pipe, stderr: Pipe },
 }
 
 impl CatchPipes {
     pub fn new(strategy: OCatchStrategy) -> Result<Self, UECOError> {
         match strategy {
-            OCatchStrategy::StdCombined => {
-                Ok(
-                    CatchPipes::Combined(Pipe::new()?)
-                )
-            }
-            OCatchStrategy::StdSeparately => {
-                Ok(
-                    CatchPipes::Separately{
-                        stdout: Pipe::new()?,
-                        stderr: Pipe::new()?,
-                    }
-                )
-            }
+            OCatchStrategy::StdCombined => Ok(CatchPipes::Combined(Pipe::new()?)),
+            OCatchStrategy::StdSeparately => Ok(CatchPipes::Separately {
+                stdout: Pipe::new()?,
+                stderr: Pipe::new()?,
+            }),
         }
     }
 }
@@ -53,7 +45,6 @@ pub struct Pipe {
 }
 
 impl Pipe {
-
     /// Constructor.
     pub(crate) fn new() -> Result<Self, UECOError> {
         let mut fds: [libc::c_int; 2] = [0, 0];
@@ -63,9 +54,9 @@ impl Pipe {
         trace!("pipe created successfully");
 
         let pipe = Self {
-                end: None,
-                read_fd: fds[PipeEnd::Read as usize],
-                write_fd: fds[PipeEnd::Write as usize],
+            end: None,
+            read_fd: fds[PipeEnd::Read as usize],
+            write_fd: fds[PipeEnd::Write as usize],
         };
 
         Ok(pipe)
@@ -88,7 +79,12 @@ impl Pipe {
     /// EOF was reached. Returns (Ok(Some(String)) if a new line
     /// was read.
     pub(crate) fn read_line(&self) -> Result<Option<(Instant, String)>, UECOError> {
-        if *self.end.as_ref().expect("Kind of Pipeend must be specified at this point") != PipeEnd::Read {
+        if *self
+            .end
+            .as_ref()
+            .expect("Kind of Pipeend must be specified at this point")
+            != PipeEnd::Read
+        {
             return Err(UECOError::PipeNotMarkedAsReadEnd);
         }
 
@@ -105,14 +101,12 @@ impl Pipe {
             if char == '\n' {
                 instant = Instant::now();
                 trace!("newline (\\n) found");
-                break
+                break;
             }
             chars.push(char);
         }
         let string = chars.into_iter().collect::<String>();
-        Ok(
-            Some((instant, string))
-        )
+        Ok(Some((instant, string)))
     }
 
     /// Connects stdout of the process to the write end of the pipe.
@@ -135,7 +129,7 @@ impl Pipe {
     fn read_char(&self) -> Result<Option<char>, UECOError> {
         const BUF_LEN: usize = 1; // Todo this is not efficient
         let mut buf: [char; BUF_LEN] = ['\0'];
-        let buf_ptr = buf.as_mut_ptr() as * mut libc::c_void;
+        let buf_ptr = buf.as_mut_ptr() as *mut libc::c_void;
         let ret = unsafe { libc::read(self.read_fd, buf_ptr, BUF_LEN) };
 
         // check error and unwrap

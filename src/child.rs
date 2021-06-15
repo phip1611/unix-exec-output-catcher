@@ -1,11 +1,11 @@
 //! Childprocess related abstractions.
 
 use crate::error::UECOError;
-use crate::libc_util::{libc_ret_to_result, LibcSyscall};
 use crate::exec::exec;
+use crate::libc_util::{libc_ret_to_result, LibcSyscall};
 use crate::pipe::Pipe;
-use std::sync::{Mutex, Arc};
 use std::fmt::Debug;
+use std::sync::{Arc, Mutex};
 
 /// The state in that a child process can be.
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -42,7 +42,7 @@ pub struct ChildProcess {
     /// Code that should be executed in child after fork() but before exec().
     child_after_dispatch_before_exec_fn: Box<dyn Send + FnMut() -> Result<(), UECOError>>,
     /// Code that should be executed in parent after fork()
-    parent_after_dispatch_fn: Box<dyn Send + FnMut() -> Result<(), UECOError>>
+    parent_after_dispatch_fn: Box<dyn Send + FnMut() -> Result<(), UECOError>>,
 }
 
 impl ChildProcess {
@@ -53,12 +53,13 @@ impl ChildProcess {
     /// * `parent_after_dispatch_fn` Code that should be executed in parent after fork()
     /// * `stdout_pipe` Reference to the pipe where STDOUT gets redirected.
     /// * `stderr_pipe` Reference to the pipe where STDERR gets redirected.
-    pub fn new(executable: &str,
-               args: Vec<&str>,
-               child_after_dispatch_before_exec_fn: Box<dyn Send + FnMut() -> Result<(), UECOError>>,
-               parent_after_dispatch_fn: Box<dyn Send + FnMut() -> Result<(), UECOError>>,
-               stdout_pipe: Arc<Mutex<Pipe>>,
-               stderr_pipe: Arc<Mutex<Pipe>>,
+    pub fn new(
+        executable: &str,
+        args: Vec<&str>,
+        child_after_dispatch_before_exec_fn: Box<dyn Send + FnMut() -> Result<(), UECOError>>,
+        parent_after_dispatch_fn: Box<dyn Send + FnMut() -> Result<(), UECOError>>,
+        stdout_pipe: Arc<Mutex<Pipe>>,
+        stderr_pipe: Arc<Mutex<Pipe>>,
     ) -> Self {
         ChildProcess {
             executable: executable.to_string(),
@@ -88,7 +89,10 @@ impl ChildProcess {
             trace!("Hello from Child!");
             let res: Result<(), UECOError> = (self.child_after_dispatch_before_exec_fn)();
             res?;
-            exec(&self.executable, self.args.iter().map(|s| s.as_str()).collect::<Vec<&str>>())?;
+            exec(
+                &self.executable,
+                self.args.iter().map(|s| s.as_str()).collect::<Vec<&str>>(),
+            )?;
             // here be dragons (after exec())
             // only happens if exec failed; otherwise at this point
             // the address space of the process is replaced by the new program
@@ -111,7 +115,7 @@ impl ChildProcess {
 
         let wait_flags = libc::WNOHANG;
         let mut status_code: libc::c_int = 0;
-        let status_code_ptr = &mut status_code as * mut libc::c_int;
+        let status_code_ptr = &mut status_code as *mut libc::c_int;
 
         let ret = unsafe { libc::waitpid(self.pid.unwrap(), status_code_ptr, wait_flags) };
         libc_ret_to_result(ret, LibcSyscall::Waitpid).unwrap();
@@ -137,7 +141,6 @@ impl ChildProcess {
         let exited_by_signal: bool = libc::WIFSIGNALED(status_code);
         // exit code (0 = success, or > 1 = error)
         let exit_code: libc::c_int = libc::WEXITSTATUS(status_code);
-
 
         if exited_normally || exited_by_signal {
             self.exit_code.replace(exit_code);

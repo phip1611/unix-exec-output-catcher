@@ -1,13 +1,13 @@
 //! Utility functions for exec.
 
-use std::ffi::CString;
-use crate::ProcessOutput;
-use crate::pipe::{CatchPipes};
+use crate::child::ChildProcess;
 use crate::error::UECOError;
 use crate::libc_util::{libc_ret_to_result, LibcSyscall};
-use crate::child::{ChildProcess};
-use crate::OCatchStrategy;
+use crate::pipe::CatchPipes;
 use crate::reader::{OutputReader, SimpleOutputReader, SimultaneousOutputReader};
+use crate::OCatchStrategy;
+use crate::ProcessOutput;
+use std::ffi::CString;
 use std::sync::{Arc, Mutex};
 
 /// Wrapper around [`libc::execvp`].
@@ -27,11 +27,11 @@ pub fn exec(executable: &str, args: Vec<&str>) -> Result<(), UECOError> {
         .map(|s| CString::new(*s).expect("Arg not contain null!"))
         .collect::<Vec<CString>>();
     // Build null terminated array with pointers null terminated c-strings
-    let mut args_nl = args.iter()
+    let mut args_nl = args
+        .iter()
         .map(|cs| cs.as_ptr())
-        .collect::<Vec<* const i8>>();
+        .collect::<Vec<*const libc::c_char>>();
     args_nl.push(std::ptr::null());
-
 
     let ret = unsafe { libc::execvp(executable.as_ptr(), args_nl.as_ptr()) };
     let res = libc_ret_to_result(ret, LibcSyscall::Execvp);
@@ -59,25 +59,41 @@ pub fn exec(executable: &str, args: Vec<&str>) -> Result<(), UECOError> {
 ///          https://unix.stackexchange.com/questions/315812/why-does-argv-include-the-program-name
 /// * `strategy` Specify how accurate the `"STDCOMBINED` vecor is. See [`crate::OCatchStrategy`] for
 ///              more information.
-pub fn fork_exec_and_catch(executable: &str, args: Vec<&str>, strategy: OCatchStrategy) -> Result<ProcessOutput, UECOError> {
+pub fn fork_exec_and_catch(
+    executable: &str,
+    args: Vec<&str>,
+    strategy: OCatchStrategy,
+) -> Result<ProcessOutput, UECOError> {
     let cp = CatchPipes::new(strategy)?;
     let child = match strategy {
-        OCatchStrategy::StdCombined => { setup_and_execute_strategy_combined(executable, args, cp) }
-        OCatchStrategy::StdSeparately => { setup_and_execute_strategy_separately(executable, args, cp) }
+        OCatchStrategy::StdCombined => setup_and_execute_strategy_combined(executable, args, cp),
+        OCatchStrategy::StdSeparately => {
+            setup_and_execute_strategy_separately(executable, args, cp)
+        }
     };
     let mut child = child?;
     child.dispatch()?;
     let output = match strategy {
-        OCatchStrategy::StdCombined => { SimpleOutputReader::new(&mut child).read_all_bl() }
-        OCatchStrategy::StdSeparately => { SimultaneousOutputReader::new(Arc::new(Mutex::new(child))).read_all_bl() }
+        OCatchStrategy::StdCombined => SimpleOutputReader::new(&mut child).read_all_bl(),
+        OCatchStrategy::StdSeparately => {
+            SimultaneousOutputReader::new(Arc::new(Mutex::new(child))).read_all_bl()
+        }
     };
     output
 }
 
 /// Setups up parent and child process and executes everything. Obtains the output
 /// using the [`crate::OCatchStrategy::StdCombined`]-strategy.
-fn setup_and_execute_strategy_combined(executable: &str, args: Vec<&str>, cp: CatchPipes) -> Result<ChildProcess, UECOError> {
-    let pipe = if let CatchPipes::Combined(pipe) = cp { pipe } else { panic!("Wrong CatchPipe-variant") };
+fn setup_and_execute_strategy_combined(
+    executable: &str,
+    args: Vec<&str>,
+    cp: CatchPipes,
+) -> Result<ChildProcess, UECOError> {
+    let pipe = if let CatchPipes::Combined(pipe) = cp {
+        pipe
+    } else {
+        panic!("Wrong CatchPipe-variant")
+    };
     let pipe = Arc::new(Mutex::new(pipe));
     let pipe_closure = pipe.clone();
     // gets called after fork() after
@@ -107,10 +123,16 @@ fn setup_and_execute_strategy_combined(executable: &str, args: Vec<&str>, cp: Ca
 
 /// Setups up parent and child process and executes everything. Obtains the output
 /// using the [`crate::OCatchStrategy::StdSeparately`]-strategy.
-fn setup_and_execute_strategy_separately(executable: &str, args: Vec<&str>, cp: CatchPipes) -> Result<ChildProcess, UECOError> {
-    let (stdout_pipe, stderr_pipe) = if let CatchPipes::Separately{stdout, stderr} = cp {
+fn setup_and_execute_strategy_separately(
+    executable: &str,
+    args: Vec<&str>,
+    cp: CatchPipes,
+) -> Result<ChildProcess, UECOError> {
+    let (stdout_pipe, stderr_pipe) = if let CatchPipes::Separately { stdout, stderr } = cp {
         (stdout, stderr)
-    } else { panic!("Wrong CatchPipe-variant") };
+    } else {
+        panic!("Wrong CatchPipe-variant")
+    };
     let stdout_pipe = Arc::new(Mutex::new(stdout_pipe));
     let stderr_pipe = Arc::new(Mutex::new(stderr_pipe));
     let stdout_pipe_closure = stdout_pipe.clone();
@@ -144,5 +166,3 @@ fn setup_and_execute_strategy_separately(executable: &str, args: Vec<&str>, cp: 
     );
     Ok(child)
 }
-
-

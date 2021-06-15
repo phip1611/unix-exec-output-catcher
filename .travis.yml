@@ -1,4 +1,21 @@
 language: rust
 rust:
   - stable
+  - nightly
 cache: cargo
+
+script:
+  # add a few UNIX targets
+  - rustup target add arm-unknown-linux-gnueabi
+  - rustup target add x86_64-apple-darwin
+  - rustup target add x86_64-unknown-linux-gnu
+
+  # check always works cross platform, e.g. ARM on Travis CI, which is most probably  x86
+  - cargo check --all-targets --target arm-unknown-linux-gnueabi
+  - cargo check --all-targets --target x86_64-apple-darwin
+  - cargo build --all-targets --target x86_64-unknown-linux-gnu
+
+  # this will only work on UNIX systems; it requires "cc" installed
+  - cargo test --target x86_64-unknown-linux-gnu
+  # run examples
+  - cargo run --example minimal
