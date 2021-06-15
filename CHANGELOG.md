@@ -1,5 +1,8 @@
+# 0.2.x - 0.2.4
+Small bug fixes including it works now on ARM.
+
 # 0.2.0
-Breaking new release. I didn't increased the major number because my crate is so new that
+Breaking new release. I didn't increase the major number because my crate is so new that
 no one is using it so far.
 Added `OCatchStrategy` as third parameter for the public interface/function.
 
